@@ -1,5 +1,6 @@
 #include <regex>
-
+#include <thread>
+#include "handlerthread.h"
 #include "server.h"
 #include "utils.h"
 #include "csv.h"
@@ -49,9 +50,10 @@ static bool TryLogin(int d)
 {
   std::string buffer;
   Read(d, buffer);
-
+  
   std::regex regex("login ([a-zA-Z]*) ([a-zA-Z_0-9]*)");
   std::smatch matches;
+
   if (std::regex_match(buffer, matches, regex))
   {
     if (matches.size() == 3)
@@ -60,17 +62,22 @@ static bool TryLogin(int d)
       std::string pass = matches[2].str();
       if (UserExists(user, pass))
       {
-        printf("Login succesful for user %s", matches[1].str());
+        printf("Login succesful for user %s!\n", user.c_str());
         Write(d, "Succes");
         return true;
       }
     }
   }
-
+  printf("Rejected login request.\n");
   Write(d,"Reject");
   return false;
 }
 
+static void HandleClient(int cl) 
+{
+  HandlerThread th(cl);
+  th.Start();
+}
 
 void Server::StartListening()
 {
@@ -91,9 +98,8 @@ void Server::StartListening()
     
     if (TryLogin(client))
     {
-      // TODO: instantiate handler thread 
+      std::thread handler(HandleClient, client);
+      handler.join();
     } 
   }
 }
-
-

@@ -20,11 +20,6 @@
   errno;                              \
 })
 
-int Read(int d, std::string& buffer)
-{
-  // TODO :implement
-}
-
 // Reads from descripter d the number of bytes sent through the channel,
 // allocates the memory and read it. It returns the number of bytes read.
 int Read(int d, char** buffer)
@@ -40,8 +35,17 @@ int Read(int d, char** buffer)
     CHECK_ERROR(read(d, memory, len), "Read data");
 
     *buffer = (char*)memory;
+    fflush(stdout);
     return len;
 }
+
+int Read(int d, std::string& buffer)
+{
+  char* tmp_buffer;
+  Read(d, &tmp_buffer);
+  buffer.assign(tmp_buffer);
+}
+
 
 void Write(int d, const std::string& data)
 {
