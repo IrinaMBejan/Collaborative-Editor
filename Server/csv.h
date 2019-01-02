@@ -7,7 +7,8 @@ class CSVRow
 {
 public:
   CSVRow(){};
-  const std::vector<std::string>& Get() const;
+  const std::vector<std::string>& Get() const {return rowData;}
+  const std::string& GetAt(int idx) const {return rowData[idx];}
   void Add(std::string cell);
 
 private:
@@ -35,12 +36,6 @@ public:
   CSVWriter(std::string filename): filename(filename){};
   void AddRow(const CSVRow& row, bool trunc=false);
 };
-
-
-const std::vector<std::string>& CSVRow::Get() const
-{
-  return rowData;
-}
 
 void CSVRow::Add(std::string cell)
 {

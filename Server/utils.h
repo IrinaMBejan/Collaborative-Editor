@@ -3,6 +3,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
+#include <string>
 
 #define CHECK_ERROR(operation, error) \
 ({                                    \
@@ -18,6 +19,11 @@
   perror(err);                        \
   errno;                              \
 })
+
+int Read(int d, std::string& buffer)
+{
+  // TODO :implement
+}
 
 // Reads from descripter d the number of bytes sent through the channel,
 // allocates the memory and read it. It returns the number of bytes read.
@@ -35,6 +41,11 @@ int Read(int d, char** buffer)
 
     *buffer = (char*)memory;
     return len;
+}
+
+void Write(int d, const std::string& data)
+{
+  Write(d, data.c_str());
 }
 
 // Writes to given descriptor the number of bytes to be written and then

@@ -7,7 +7,8 @@
 #include <signal.h>
 #include <pthread.h>
 
-#define PORT 2996 
+#define PORT 2995 
+#define LOGIN_FILE "./files/users.csv" 
 
 class Server 
 {
@@ -18,6 +19,5 @@ public:
 
 private:
   void SetSocketOptions();
-
   int sd; //socket descriptor
 };
