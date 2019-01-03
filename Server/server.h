@@ -1,3 +1,6 @@
+#ifndef SERVER_H
+#define SERVER_H
+
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -21,3 +24,5 @@ private:
   void SetSocketOptions();
   int sd; //socket descriptor
 };
+
+#endif // SERVER_H
