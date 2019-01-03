@@ -5,7 +5,7 @@
 
 #include "utils.h"
 
-int Read(int d, char** buffer)
+static int Read(int d, char** buffer)
 {
     int len;
 
@@ -29,7 +29,7 @@ void Read(int d, std::string& buffer)
   buffer.assign(tmp_buffer);
 }
 
-void Write(int d, const char* data)
+static void Write(int d, const char* data)
 {
     int len = strlen(data);
 

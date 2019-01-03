@@ -23,4 +23,3 @@ void Read(int d, std::string& buffer);
 // Writes to given descriptor the number of bytes to be written and then
 // the data itself.
 void Write(int d, const std::string& data);
-

@@ -8,8 +8,8 @@ class CSVRow
 {
 public:
   CSVRow(){};
-  const std::vector<std::string>& Get() const {return rowData;}
-  const std::string& GetAt(int idx) const {return rowData[idx];}
+  inline const std::vector<std::string>& Get() const {return rowData;}
+  inline const std::string& GetAt(int idx) const {return rowData[idx];}
   void Add(std::string cell);
 
 private:

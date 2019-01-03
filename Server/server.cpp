@@ -77,7 +77,7 @@ static bool TryLogin(int d)
 static void HandleClient(int cl) 
 {
   HandlerThread th(cl);
-  th.Start();
+//  th.Start();
 }
 
 void Server::StartListening()
@@ -99,8 +99,8 @@ void Server::StartListening()
     
     if (TryLogin(client))
     {
-      std::thread handler(HandleClient, client);
-      handler.join();
+//      std::thread handler(HandleClient, client);
+  //    handler.join();
     } 
   }
 }
