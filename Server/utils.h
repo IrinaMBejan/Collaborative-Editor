@@ -18,7 +18,7 @@
 
 // Reads from descripter d the number of bytes sent through the channel,
 // allocates the memory and read it. 
-void Read(int d, std::string& buffer);
+int Read(int d, std::string& buffer);
 
 // Writes to given descriptor the number of bytes to be written and then
 // the data itself.

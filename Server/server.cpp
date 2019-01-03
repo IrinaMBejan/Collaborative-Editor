@@ -99,6 +99,8 @@ void Server::StartListening()
     
     if (TryLogin(client))
     {
+      printf("Started new thread for client\n");
+
       std::thread handler(HandleClient, client);
       handler.join();
     } 

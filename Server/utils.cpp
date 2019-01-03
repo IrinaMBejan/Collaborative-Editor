@@ -22,11 +22,12 @@ static int Read(int d, char** buffer)
     return len;
 }
 
-void Read(int d, std::string& buffer)
+int Read(int d, std::string& buffer)
 {
   char* tmp_buffer;
-  Read(d, &tmp_buffer);
+  int res = Read(d, &tmp_buffer);
   buffer.assign(tmp_buffer);
+  return res;
 }
 
 static void Write(int d, const char* data)
