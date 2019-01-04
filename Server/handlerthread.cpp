@@ -142,6 +142,7 @@ void HandlerThread::HandleDownloadRequest(const std::string& filename)
 
 void HandlerThread::HandleEditRequest(const std::string& filename)
 {
+  Write(client, "Succes");
   // TODO : check session & create session
 }
 

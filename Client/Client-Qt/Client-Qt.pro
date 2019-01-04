@@ -27,11 +27,13 @@ CONFIG += c++11
 SOURCES += \
         main.cpp \
         mainwindow.cpp \
-    requestshandler.cpp
+    requestshandler.cpp \
+    utils.cpp
 
 HEADERS += \
         mainwindow.h \
-    requestshandler.h
+    requestshandler.h \
+    utils.h
 
 FORMS += \
         mainwindow.ui
