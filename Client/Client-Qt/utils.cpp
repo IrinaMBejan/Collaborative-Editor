@@ -5,28 +5,23 @@
 
 #include "utils.h"
 
-static int Read(int d, char** buffer)
+int Read(int d, std::string& buffer)
 {
-    int len;
+    int len = 0;
 
     CHECK_ERROR((read(d, &len, sizeof(int))),"Read no. of bytes");
+    if (!len)
+        return 0;
 
-    void *memory = malloc(len);
+    char *memory = (char*)malloc((len + 1) * sizeof(char));
     if (memory == NULL) ERROR("Allocation");
     memset(memory, 0, len+1);
 
     CHECK_ERROR(read(d, memory, len), "Read data");
 
-    *buffer = (char*)memory;
-    fflush(stdout);
+    buffer.assign(memory);
+    free(memory);
     return len;
-}
-
-void Read(int d, std::string& buffer)
-{
-  char* tmp_buffer;
-  Read(d, &tmp_buffer);
-  buffer.assign(tmp_buffer);
 }
 
 static void Write(int d, const char* data)

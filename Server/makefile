@@ -21,3 +21,5 @@ csv.o: csv.cpp csv.h
 clean:
 	$(RM) server *.o *~
 
+run:
+	echo run | gdb server

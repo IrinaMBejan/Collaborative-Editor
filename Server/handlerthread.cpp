@@ -1,9 +1,17 @@
 #include <regex>
 #include <fstream>
+#include <algorithm>
+#include <iostream>
 
 #include "handlerthread.h"
 #include "utils.h"
 #include "csv.h"
+
+
+#define MAX_EMPTY 10
+
+
+using namespace std; //// remove me
 
 
 static constexpr const char* retrieve_list = "retrieve files";
@@ -25,18 +33,24 @@ void HandlerThread::Start()
   std::string buffer;
   buffer.clear();
   
+  int tries = 0;
   while(1)
   {
     if (Read(client, buffer))
     {
       HandleMessage(buffer);
       buffer.clear();
+    } else {
+        tries += 1;
+        if (tries >= MAX_EMPTY)
+            break;
     }
   }
 }
 
 void HandlerThread::HandleMessage(const std::string& buffer)
 {
+  cout << "in dispatch: " << buffer << endl;
   if (!buffer.size())
     return;
 
@@ -96,7 +110,7 @@ void HandlerThread::HandleMessage(const std::string& buffer)
       HandleInsertOperation(position, text);
     }
   }
-  else if (std::regex_match(buffer, matches, operations_close_reg))
+  else if (std::regex_match(buffer, matches, operations_delete_reg))
   {
     if (matches.size() == 3)
     {
@@ -130,9 +144,9 @@ void HandlerThread::HandleOperationClose()
 
 void HandlerThread::HandleInsertOperation(int position, std::string text)
 {
+  std::lock_guard<std::mutex> guard((*sessions)[sessionIdx]->content_mutex);
+  
   Session* session = (*sessions)[sessionIdx];
-
-  std::lock_guard<std::mutex> guard(session->content_mutex);
   session->content.insert(position,text);
 
   Write(client,"Succes");
@@ -140,9 +154,9 @@ void HandlerThread::HandleInsertOperation(int position, std::string text)
 
 void HandlerThread::HandleDeleteOperation(int position, int length)
 {
+  std::lock_guard<std::mutex> guard((*sessions)[sessionIdx]->content_mutex);
+  
   Session* session = (*sessions)[sessionIdx];
-
-  std::lock_guard<std::mutex> guard(session->content_mutex);
   session->content.erase(position,length);
 
   Write(client, "Succes");
@@ -207,6 +221,7 @@ void HandlerThread::HandleDownloadRequest(const std::string& filename)
     getline(t, tmp);
     buffer << tmp;
   }
+  t.close();
   
   Write(client, "Succes");
   Write(client, buffer.str());
@@ -228,6 +243,7 @@ void HandlerThread::HandleEditRequest(const std::string& filename)
   if (!JoinSession(sessionIdx))
   {
     Write(client, "Rejected");
+    return;
   }
 
   Write(client, "Succes");
@@ -268,14 +284,10 @@ bool HandlerThread::ExitSession(int sessIdx)
   std::lock_guard<std::mutex> lock((*sessions)[sessIdx]->content_mutex);
   
   auto& tmpClients = (*sessions)[sessIdx]->clients;
+  std::vector<int>::iterator it;
   
-  int idxToRemove;
-  for (int idx = 0; idx < tmpClients.size(); idx++)
-  {
-    if (tmpClients[idx] == client)
-      idxToRemove = idx;
-  }
+  it = std::find(tmpClients.begin(), tmpClients.end(), client);
 
-  tmpClients.erase(tmpClients.begin() + idxToRemove);
+  tmpClients.erase(it);
   return true;
 }

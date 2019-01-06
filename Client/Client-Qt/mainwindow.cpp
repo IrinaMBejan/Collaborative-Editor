@@ -23,6 +23,8 @@ MainWindow::MainWindow(QWidget *parent) :
     }
 
     externUpdate = false;
+
+    emit on_pushButton_clicked();
 }
 
 MainWindow::~MainWindow()
@@ -34,6 +36,9 @@ void MainWindow::on_pushButton_clicked()
 {
     std::string user = ui->userField->text().toStdString();
     std::string pass = ui->passField->text().toStdString();
+
+    user = "ana";
+    pass = "pass123";
 
     if (!handler->SendLoginRequest(user, pass))
     {
@@ -120,6 +125,7 @@ void MainWindow::on_editFile_clicked()
         return;
     }
 
+    qDebug() << filename;
     QString data;
     if (!handler->SendDownloadFileRequest(filename, data))
     {
