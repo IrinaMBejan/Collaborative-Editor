@@ -7,6 +7,10 @@
 
 
 static constexpr const char* retrieve_list = "retrieve files";
+static constexpr const char* operations_init = "operations start";
+static constexpr const char* operations_close = "operations close";
+static constexpr const char* operation_insert = "insert ([0-9]+) (.*?)";
+static constexpr const char* operation_delete = "delete ([0-9]+) ([0-9]+)";
 static constexpr const char* create_file = 
   "create file ([a-zA-Z0-9]+.[a-zA-Z0-9]+)";
 static constexpr const char* download_file = 
@@ -20,7 +24,7 @@ void HandlerThread::Start()
 {
   std::string buffer;
   buffer.clear();
-
+  
   while(1)
   {
     if (Read(client, buffer))
@@ -42,6 +46,10 @@ void HandlerThread::HandleMessage(const std::string& buffer)
   std::regex download_file_reg(download_file);
   std::regex create_file_reg(create_file);
   std::regex edit_file_reg(edit_file);
+  std::regex operations_init_reg(operations_init);
+  std::regex operations_close_reg(operations_close);
+  std::regex operations_insert_reg(operation_insert);
+  std::regex operations_delete_reg(operation_delete);
 
   if (std::regex_match(buffer, retrieve_list_reg))
   {
@@ -71,11 +79,73 @@ void HandlerThread::HandleMessage(const std::string& buffer)
       HandleEditRequest(filename);
     }
   }
+  else if (std::regex_match(buffer, operations_init_reg))
+  {
+    HandleOperationStart();
+  }
+  else if (std::regex_match(buffer, operations_close_reg))
+  {
+    HandleOperationClose();
+  }
+  else if (std::regex_match(buffer, matches, operations_insert_reg))
+  {
+    if (matches.size() == 3)
+    {
+      int position = std::stoi(matches[1].str());
+      std::string text = matches[2].str();
+      HandleInsertOperation(position, text);
+    }
+  }
+  else if (std::regex_match(buffer, matches, operations_close_reg))
+  {
+    if (matches.size() == 3)
+    {
+      int position = std::stoi(matches[1].str());
+      int size = std::stoi(matches[2].str());
+      HandleDeleteOperation(position, size);
+    }
+  }
   else 
   {
     printf("Don't know how to treat this: %s\n", buffer.c_str());
     Write(client, "Rejected");
   }
+}
+
+void HandlerThread::HandleOperationStart()
+{
+  (sessionIdx != -1) ?
+    Write(client, "Succes") :
+    Write(client, "Rejected");
+}
+
+void HandlerThread::HandleOperationClose()
+{
+  if (ExitSession(sessionIdx))
+  {
+    sessionIdx = -1;
+    Write(client, "Succes");
+  }
+}
+
+void HandlerThread::HandleInsertOperation(int position, std::string text)
+{
+  Session* session = (*sessions)[sessionIdx];
+
+  std::lock_guard<std::mutex> guard(session->content_mutex);
+  session->content.insert(position,text);
+
+  Write(client,"Succes");
+}
+
+void HandlerThread::HandleDeleteOperation(int position, int length)
+{
+  Session* session = (*sessions)[sessionIdx];
+
+  std::lock_guard<std::mutex> guard(session->content_mutex);
+  session->content.erase(position,length);
+
+  Write(client, "Succes");
 }
 
 void HandlerThread::HandleRetrieveRequest()
@@ -87,13 +157,13 @@ void HandlerThread::HandleRetrieveRequest()
   const std::vector<CSVRow> files = reader.GetData();
 
   std::string res = "";
-  for (int idx = 0; idx < files.size(); ++idx)
+  for (int idx = 0; idx < (int)files.size(); ++idx)
   {
     res += files[idx].GetAt(0);
     res += ",";
     res += files[idx].GetAt(1);
 
-    if (idx +1 < files.size())
+    if (idx +1 < (int)files.size())
       res += ",";
   }
 
@@ -119,6 +189,8 @@ void HandlerThread::HandleCreateFileRequest(const std::string& filename)
   CSVWriter listUpdate(fileListPath);
   listUpdate.AddRow(listRow);
 
+  InitSession();
+
   Write(client, "Succes");
 }
 
@@ -142,7 +214,68 @@ void HandlerThread::HandleDownloadRequest(const std::string& filename)
 
 void HandlerThread::HandleEditRequest(const std::string& filename)
 {
+  // Locks reading from map - maybe a RW lock?
+ 
+  std::lock_guard<std::mutex> lock((*sessions_mutex));
+  
+  if ((*fileToSession).find(filename) == (*fileToSession).end())
+  {
+    Write(client, "Rejected");
+    return;
+  }
+  
+  sessionIdx = (*fileToSession)[filename];
+  if (!JoinSession(sessionIdx))
+  {
+    Write(client, "Rejected");
+  }
+
   Write(client, "Succes");
-  // TODO : check session & create session
 }
 
+bool HandlerThread::JoinSession(int sessIdx)
+{
+  // Write Session lock
+ 
+  std::lock_guard<std::mutex> lock((*sessions)[sessIdx]->content_mutex);
+  
+  auto& tmpClients = (*sessions)[sessIdx]->clients;
+  
+  if (tmpClients.size() == SESSION_CLIENTS_MAX)
+  {
+    sessionIdx = -1;
+    return false;
+  }
+  
+  tmpClients.push_back(client);
+  return true;
+}
+
+void HandlerThread::InitSession()
+{
+  std::lock_guard<std::mutex> lock(*sessions_mutex);
+  
+  Session* tmpSession = new Session();
+  tmpSession->filename = currentFilename;
+  (*fileToSession)[currentFilename] = (*sessions).size();
+  (*sessions).push_back(tmpSession); 
+}
+
+bool HandlerThread::ExitSession(int sessIdx)
+{
+  // Write Session lock
+ 
+  std::lock_guard<std::mutex> lock((*sessions)[sessIdx]->content_mutex);
+  
+  auto& tmpClients = (*sessions)[sessIdx]->clients;
+  
+  int idxToRemove;
+  for (int idx = 0; idx < tmpClients.size(); idx++)
+  {
+    if (tmpClients[idx] == client)
+      idxToRemove = idx;
+  }
+
+  tmpClients.erase(tmpClients.begin() + idxToRemove);
+  return true;
+}

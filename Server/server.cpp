@@ -1,10 +1,19 @@
 #include <regex>
 #include <thread>
+#include <vector>
+#include <map>
 
 #include "handlerthread.h"
 #include "server.h"
 #include "utils.h"
 #include "csv.h"
+
+static constexpr const char* folder = 
+  "/home/ina/Repos/Irina/Collaborative-Editor/Server/files/";
+
+std::vector<Session*> sessions;
+std::mutex sessions_mutex;
+std::map<std::string, int> fileToSession;
 
 Server::Server()
 {
@@ -24,6 +33,7 @@ Server::Server()
 
   CHECK_ERROR(listen(sd,2),"Listen error");
 
+  InitSessions();
 }
 
 void Server::SetSocketOptions()
@@ -32,6 +42,24 @@ void Server::SetSocketOptions()
   setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 }
 
+void Server::InitSessions()
+{
+  std::string filepath = folder;
+  filepath += FILE_LIST;
+  
+  CSVReader reader(filepath);
+  const std::vector<CSVRow> files = reader.GetData();
+  
+  for (int idx = 0; idx < files.size(); idx++)
+  {
+    std::string fname = files[idx].GetAt(0);
+    
+    Session* tmpSession = new Session();
+    tmpSession->filename = fname;
+    fileToSession[fname] = sessions.size();
+    sessions.push_back(tmpSession);
+  }
+}
 
 static bool UserExists(const std::string& user, const std::string& pass)
 {
@@ -76,7 +104,7 @@ static bool TryLogin(int d)
 
 static void HandleClient(int cl) 
 {
-  HandlerThread th(cl);
+  HandlerThread th(cl, &sessions, &sessions_mutex, &fileToSession);
   th.Start();
 }
 

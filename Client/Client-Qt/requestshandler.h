@@ -14,6 +14,12 @@ public:
     bool SendCreateFileRequest(std::string filename);
     bool SendEditRequest(std::string filename);
 
+    bool SendOperationInit();
+    bool SendOperationClose();
+
+    bool SendDeleteOperation(int position, int count);
+    bool SendInsertOperation(int position, const std::string& text);
+
 private:
 
     QStringList ExtractListOfFiles(QString data);

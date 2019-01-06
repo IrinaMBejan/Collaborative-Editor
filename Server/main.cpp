@@ -1,4 +1,6 @@
-#include <iostream>
+#include <string>
+#include <vector>
+#include <memory>
 #include "server.h"
 
 int main()

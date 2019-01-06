@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QPlainTextEdit>
 
 #include "requestshandler.h"
 
@@ -32,10 +33,21 @@ private:
     void WriteDataToFile(const QString &data, const QString &path);
     void RefreshDataTable();
     void ShowError(QString err);
+    void ApplyUpdate(const QString &plaintext);
+
+private slots:
+    void SendClosingOperation();
+    void SendUpdateOnContentChange(int position,
+                                   int charsRemoved,
+                                   int charsAdded);
+    void SeekUpdates();
 
 private:
     Ui::MainWindow *ui;
     RequestsHandler *handler;
+    QPlainTextEdit* editor;
+    QTimer* timer;
+    bool externUpdate;
 };
 
 #endif // MAINWINDOW_H

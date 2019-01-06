@@ -9,9 +9,18 @@
 #include <stdlib.h>
 #include <signal.h>
 #include <pthread.h>
+#include <mutex>
+#include <vector>
+#include <map>
 
-#define PORT 2991 
+#include "session.h"
+
+#define PORT 2985 
 #define LOGIN_FILE "./files/users.csv" 
+
+extern std::vector<Session*> sessions;
+extern std::mutex sessions_mutex;
+extern std::map<std::string, int> fileToSession;
 
 class Server 
 {
@@ -21,8 +30,10 @@ public:
   void StartListening();
 
 private:
+  void InitSessions();
   void SetSocketOptions();
   int sd; //socket descriptor
+  
 };
 
 #endif // SERVER_H

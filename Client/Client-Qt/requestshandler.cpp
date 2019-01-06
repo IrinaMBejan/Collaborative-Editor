@@ -10,7 +10,7 @@
 #include <arpa/inet.h>
 
 #include <QDebug>
-#define PORT 2991
+#define PORT 2985
 #define SERVER_ADDRESS "127.0.0.1"
 
 RequestsHandler::RequestsHandler()
@@ -105,6 +105,59 @@ bool RequestsHandler::SendEditRequest(std::string filename)
 
     return (response == "Succes");
 }
+
+bool RequestsHandler::SendOperationInit()
+{
+    std::string request = "operations start";
+    Write(sd, request);
+
+    std::string response;
+    Read(sd,response);
+
+    return (response == "Succes");
+}
+
+bool RequestsHandler::SendOperationClose()
+{
+    std::string request = "operations close";
+    Write(sd, request);
+
+    std::string response;
+    Read(sd,response);
+
+    return (response == "Succes");
+}
+
+bool RequestsHandler::SendDeleteOperation(int position, int count)
+{
+    std::string request = "delete " +
+            std::to_string(position) +
+            " " +
+            std::to_string(count);
+
+    Write(sd, request);
+
+    std::string response;
+    Read(sd,response);
+
+    return (response == "Succes");
+}
+
+bool RequestsHandler::SendInsertOperation(int position, const std::string &text)
+{
+    std::string request = "insert " +
+            std::to_string(position) +
+            " " +
+            text;
+
+    Write(sd, request);
+
+    std::string response;
+    Read(sd,response);
+
+    return (response == "Succes");
+}
+
 
 QStringList RequestsHandler::ExtractListOfFiles(
         QString data)

@@ -1,4 +1,4 @@
-#include "mainwindow.h"
+﻿#include "mainwindow.h"
 #include "ui_mainwindow.h"
 
 #include <QMessageBox>
@@ -6,6 +6,7 @@
 #include <QFileDialog>
 #include <QDockWidget>
 #include <QPlainTextEdit>
+#include <QTimer>
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -20,6 +21,8 @@ MainWindow::MainWindow(QWidget *parent) :
         ui->dataTable->horizontalHeader()->setSectionResizeMode(
             idx, QHeaderView::Stretch);
     }
+
+    externUpdate = false;
 }
 
 MainWindow::~MainWindow()
@@ -124,14 +127,83 @@ void MainWindow::on_editFile_clicked()
         return;
     }
 
-    QDockWidget* dock = new QDockWidget("Text Editor", this);
+    if (!handler->SendOperationInit())
+    {
+        ShowError("Something went wrong");
+        return;
+    }
+
+    timer = new QTimer(this);
+    connect(timer, SIGNAL(timeout()), this, SLOT(SeekUpdates()));
+    timer->start(1000);
+
+    QDockWidget* dock = new QDockWidget(filename, this);
     dock->setFloating(true);
 
-    QPlainTextEdit* edit = new QPlainTextEdit(dock);
-    dock->setWidget(edit);
-    edit->setPlainText(data);
+    editor = new QPlainTextEdit(dock);
+    QObject::connect(editor->document(), SIGNAL(contentsChange(int,int,int)),
+                     this, SLOT(SendUpdateOnContentChange(int,int,int)));
+    QObject::connect(dock, SIGNAL(destroyed()),
+                     this, SLOT(SendClosingOperation()));
+
+    dock->setWidget(editor);
+    editor->setPlainText(data);
+    dock->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
+    dock->setMinimumSize(QSize(600,800));
 
     dock->show();
+}
+
+void MainWindow::SendClosingOperation()
+{
+    if (!handler->SendOperationClose())
+    {
+        ShowError("Something went wrong");
+        return;
+    }
+}
+
+void MainWindow::SendUpdateOnContentChange(
+        int position, int charsRemoved, int charsAdded)
+{
+    if (externUpdate)
+    {
+        return;
+    }
+
+    if (charsRemoved)
+    {
+        handler->SendDeleteOperation(position + charsRemoved - 1,
+                                     charsRemoved);
+    }
+
+    if (charsAdded)
+    {
+        handler->SendInsertOperation(
+                    position,
+                    editor->toPlainText().mid(position, charsAdded).toStdString());
+    }
+
+}
+
+void MainWindow::SeekUpdates()
+{
+
+}
+
+void MainWindow::ApplyUpdate(const QString &plaintext)
+{
+    externUpdate = true;
+
+    QTextCursor oldCursor = editor->textCursor();
+    int pos = oldCursor.position();
+
+    editor->setPlainText(plaintext);
+
+    oldCursor.setPosition(pos);
+    editor->setTextCursor(oldCursor);
+
+    externUpdate = false;
 }
 
 void MainWindow::SaveFileAs(const QString& data, const QString& filename)
