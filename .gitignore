@@ -26,7 +26,6 @@ qrc_*.cpp
 ui_*.h
 *.qmlc
 *.jsc
-Makefile*
 *build-*
 
 # Qt unit tests
@@ -44,3 +43,10 @@ CMakeLists.txt.user*
 
 # Temporary files.
 *.tu
+*.dSYM
+.qmake.stash
+Client-Qt.app
+Client/Client-Qt/Makefile
+
+# Executables
+Server/server

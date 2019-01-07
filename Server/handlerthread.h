@@ -1,6 +1,7 @@
 #ifndef HANDLERTHREAD_H
 #define HANDLERTHREAD_H
 
+#include <map>
 #include <string>
 #include <vector>
 #include "session.h"

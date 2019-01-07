@@ -9,7 +9,7 @@
 #include "csv.h"
 
 static constexpr const char* folder = 
-  "/home/ina/Repos/Irina/Collaborative-Editor/Server/files/";
+  "files/";
 
 std::vector<Session*> sessions;
 std::mutex sessions_mutex;

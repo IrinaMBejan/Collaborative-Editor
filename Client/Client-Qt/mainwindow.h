@@ -2,7 +2,9 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QDockWidget>
 #include <QPlainTextEdit>
+#include <QDebug>
 
 #include "requestshandler.h"
 
@@ -48,6 +50,19 @@ private:
     QPlainTextEdit* editor;
     QTimer* timer;
     bool externUpdate;
+};
+
+
+class EditQDockWidget : public QDockWidget {
+
+    Q_OBJECT
+
+signals:
+    void onClosing();
+
+public:
+    using QDockWidget::QDockWidget;
+    void closeEvent(QCloseEvent *);
 };
 
 #endif // MAINWINDOW_H

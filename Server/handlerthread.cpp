@@ -2,6 +2,7 @@
 #include <fstream>
 #include <algorithm>
 #include <iostream>
+#include <sstream>
 
 #include "handlerthread.h"
 #include "utils.h"
@@ -26,7 +27,7 @@ static constexpr const char* download_file =
 static constexpr const char* edit_file = 
   "edit file ([a-zA-Z0-9]+.[a-zA-Z0-9]+)";
 static constexpr const char* folder = 
-  "/home/ina/Repos/Irina/Collaborative-Editor/Server/files/";
+  "files/";
 
 void HandlerThread::Start()
 {
@@ -135,6 +136,7 @@ void HandlerThread::HandleOperationStart()
 
 void HandlerThread::HandleOperationClose()
 {
+  cout << "Closing session: " << sessionIdx << endl;
   if (ExitSession(sessionIdx))
   {
     sessionIdx = -1;
@@ -279,8 +281,9 @@ void HandlerThread::InitSession()
 
 bool HandlerThread::ExitSession(int sessIdx)
 {
-  // Write Session lock
- 
+  if (sessIdx == -1)
+    return true;
+
   std::lock_guard<std::mutex> lock((*sessions)[sessIdx]->content_mutex);
   
   auto& tmpClients = (*sessions)[sessIdx]->clients;

@@ -8,6 +8,7 @@
 #include <QPlainTextEdit>
 #include <QTimer>
 
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
@@ -143,13 +144,13 @@ void MainWindow::on_editFile_clicked()
     connect(timer, SIGNAL(timeout()), this, SLOT(SeekUpdates()));
     timer->start(1000);
 
-    QDockWidget* dock = new QDockWidget(filename, this);
+    EditQDockWidget* dock = new EditQDockWidget(filename, this);
     dock->setFloating(true);
 
     editor = new QPlainTextEdit(dock);
     QObject::connect(editor->document(), SIGNAL(contentsChange(int,int,int)),
                      this, SLOT(SendUpdateOnContentChange(int,int,int)));
-    QObject::connect(dock, SIGNAL(destroyed()),
+    QObject::connect(dock, SIGNAL(onClosing()),
                      this, SLOT(SendClosingOperation()));
 
     dock->setWidget(editor);
@@ -162,6 +163,7 @@ void MainWindow::on_editFile_clicked()
 
 void MainWindow::SendClosingOperation()
 {
+    qDebug() << "Closing operation...";
     if (!handler->SendOperationClose())
     {
         ShowError("Something went wrong");
@@ -273,4 +275,11 @@ void MainWindow::RefreshDataTable()
     {
         ShowError("An error occured, please restart the application.");
     }
+}
+
+
+void EditQDockWidget::closeEvent(QCloseEvent *event)
+{
+    emit onClosing();
+    event->accept();
 }

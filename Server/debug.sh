@@ -1,5 +1,5 @@
 #! /usr/bin/env bash
 
 if make; then
-    make run
+    make debug
 fi

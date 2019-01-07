@@ -1,5 +1,12 @@
 CC = g++
-CFLAGS = -g -Wall -pthread
+CFLAGS = -g -Wall -pthread -std=gnu++17
+DB = echo run | gdb
+
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+	DB = lldb -o run
+endif
+
 
 default: server
 
@@ -21,5 +28,9 @@ csv.o: csv.cpp csv.h
 clean:
 	$(RM) server *.o *~
 
+
 run:
-	echo run | gdb server
+	./server
+
+debug:
+	$(DB) server
