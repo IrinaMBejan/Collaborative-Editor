@@ -18,14 +18,14 @@ using namespace std; //// remove me
 static constexpr const char* retrieve_list = "retrieve files";
 static constexpr const char* operations_init = "operations start";
 static constexpr const char* operations_close = "operations close";
-static constexpr const char* operation_insert = "insert ([0-9]+) (.*?)";
-static constexpr const char* operation_delete = "delete ([0-9]+) ([0-9]+)";
+static constexpr const char* operation_insert = "insert (\\d+) ([\\s\\S]+)";
+static constexpr const char* operation_delete = "delete (\\d+) (\\d+)";
 static constexpr const char* create_file = 
-  "create file ([a-zA-Z0-9]+.[a-zA-Z0-9]+)";
+  "create file ([\\w\\d]+.[\\w\\d]+)";
 static constexpr const char* download_file = 
-  "download file ([a-zA-Z0-9]+.[a-zA-Z0-9]+)";
+  "download file ([\\w\\d]+.[\\w\\d]+)";
 static constexpr const char* edit_file = 
-  "edit file ([a-zA-Z0-9]+.[a-zA-Z0-9]+)";
+  "edit file ([\\w\\d]+.[\\w\\d]+)";
 static constexpr const char* folder = 
   "files/";
 
