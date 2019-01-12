@@ -108,6 +108,11 @@ static void HandleClient(int cl)
   th.Start();
 }
 
+static void JoinThread(std::thread& t)
+{
+    t.join();
+}
+
 void Server::StartListening()
 {
   printf("Waiting for clients on port %d\n", PORT);
@@ -116,7 +121,9 @@ void Server::StartListening()
   struct sockaddr_in cl;
   bzero (&cl, sizeof(cl));
   int size = sizeof(cl);
-  
+ 
+  std::vector<std::thread> v;
+
   while (1)
   {
     int client;
@@ -129,8 +136,9 @@ void Server::StartListening()
     {
       printf("Started new thread for client\n");
 
-      std::thread handler(HandleClient, client);
-      handler.join();
+      threads.push_back(std::thread(HandleClient, client));
     } 
   }
+
+  std::for_each(threads.begin(),threads.end(),JoinThread);
 }

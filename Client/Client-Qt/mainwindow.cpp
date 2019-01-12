@@ -127,20 +127,6 @@ void MainWindow::on_editFile_clicked()
         return;
     }
 
-    qDebug() << filename;
-    QString data;
-    if (!handler->SendDownloadFileRequest(filename, data))
-    {
-        ShowError("An unknown error ocurred. Retry or try another file!");
-        return;
-    }
-
-    if (!handler->SendOperationInit())
-    {
-        ShowError("Something went wrong");
-        return;
-    }
-
     timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(SeekUpdates()));
     timer->start(500);
@@ -158,7 +144,6 @@ void MainWindow::on_editFile_clicked()
 
     dock->setWidget(editor);
 
-    SendUpdateOnContentChange(0,0,data);
     dock->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
     dock->setMinimumSize(QSize(600,800));
 
@@ -233,8 +218,6 @@ void MainWindow::ApplyUpdate(const QString &plaintext, int cursorPos)
     externUpdate = true;
 
     editor->setPlainText(plaintext);
-    if (plaintext.length()-1 < cursorPos)
-        cursorPos = plaintext.length()-1;
 
     QTextCursor oldCursor = editor->textCursor();
     oldCursor.setPosition(cursorPos);

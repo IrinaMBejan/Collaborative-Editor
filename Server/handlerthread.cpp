@@ -5,6 +5,7 @@
 #include <sstream>
 #include <chrono>
 #include <ctime>
+#include <algorithm>
 
 #include "handlerthread.h"
 #include "utils.h"
@@ -12,10 +13,6 @@
 
 
 #define MAX_EMPTY 10
-
-
-using namespace std; //// remove me
-
 
 static constexpr const char* retrieve_list = "retrieve files";
 static constexpr const char* operations_init = "operations start";
@@ -90,7 +87,7 @@ void HandlerThread::Start()
 
 void HandlerThread::HandleMessage(const std::string& buffer)
 {
-  cout << "in dispatch: " << buffer << endl;
+  std::cout << "in dispatch: " << buffer << std::endl;
   if (!buffer.size())
     return;
 
@@ -182,11 +179,8 @@ void HandlerThread::SendUpdate()
         std::lock_guard<std::mutex> guard((*sessions)[sessionIdx]->content_mutex);
         Session* session = (*sessions)[sessionIdx];
 
-        if (!session->content.empty())
-        {
-            Write(client, session->content);
-            Write(client, std::to_string(session->cursorPosition[client]));
-        }
+        Write(client, session->content);
+        Write(client, std::to_string(session->cursorPosition[client]));
     }
 }
 
@@ -199,7 +193,7 @@ void HandlerThread::HandleOperationStart()
 
 void HandlerThread::HandleOperationClose()
 {
-  cout << "Closing session: " << sessionIdx << endl;
+  std::cout << "Closing session: " << sessionIdx << std::endl;
   if (ExitSession(sessionIdx))
   {
     sessionIdx = -1;
@@ -212,7 +206,13 @@ void HandlerThread::HandleCursorOperation(int delta)
   std::lock_guard<std::mutex> guard((*sessions)[sessionIdx]->content_mutex);
 
   Session* session = (*sessions)[sessionIdx];
+
   session->cursorPosition[client]+= delta;
+
+  session->cursorPosition[client] = 
+      std::min(session->cursorPosition[client], (int)session->content.size());
+  session->cursorPosition[client] = 
+      std::max(session->cursorPosition[client], 0);
 }
 
 void HandlerThread::HandleInsertOperation(int position, std::string text)
@@ -225,7 +225,10 @@ void HandlerThread::HandleInsertOperation(int position, std::string text)
   for (auto& cursor : session->cursorPosition)
   {
     if (position <= cursor.second)
-      cursor.second += position;
+    {
+        cursor.second += text.size();
+        cursor.second = std::min(cursor.second, (int)session->content.size());
+    }
   }
 }
 
@@ -239,8 +242,11 @@ void HandlerThread::HandleDeleteOperation(int position, int length)
   for (auto& cursor : session->cursorPosition)
   {
     if (position <= cursor.second && length == 1)
-      cursor.second--;
+    {
+        cursor.second--;
+        cursor.second = std::max(cursor.second, 0);
     // TODO: update for longer text
+    }
   }
 
 }
@@ -291,7 +297,7 @@ void HandlerThread::HandleCreateFileRequest(const std::string& filename)
   Write(client, "Succes");
 }
 
-void HandlerThread::HandleDownloadRequest(const std::string& filename)
+static std::string LoadData(const std::string& filename)
 {
   std::string filepath = folder+filename;
   std::string tmp;  
@@ -305,9 +311,14 @@ void HandlerThread::HandleDownloadRequest(const std::string& filename)
     buffer << tmp;
   }
   t.close();
-  
+
+  return buffer.str();
+}
+
+void HandlerThread::HandleDownloadRequest(const std::string& filename)
+{
   Write(client, "Succes");
-  Write(client, buffer.str());
+  Write(client, LoadData(filename));
 }
 
 void HandlerThread::HandleEditRequest(const std::string& filename)
@@ -335,7 +346,8 @@ bool HandlerThread::JoinSession(int sessIdx)
   // Write Session lock
   std::lock_guard<std::mutex> lock((*sessions)[sessIdx]->content_mutex);
  
-  auto& tmpClients = (*sessions)[sessIdx]->clients;
+  Session* session = (*sessions)[sessIdx];
+  auto& tmpClients = session->clients;
   
   if (tmpClients.size() == SESSION_CLIENTS_MAX)
   {
@@ -344,7 +356,10 @@ bool HandlerThread::JoinSession(int sessIdx)
   }
   
   tmpClients.push_back(client);
-  (*sessions)[sessIdx]->cursorPosition[client]=0;
+  session->cursorPosition[client]=0;
+  
+  session->content = LoadData(session->filename);
+
   return true;
 }
 

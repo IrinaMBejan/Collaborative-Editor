@@ -12,6 +12,7 @@
 #include <mutex>
 #include <vector>
 #include <map>
+#include <thread>
 
 #include "session.h"
 
@@ -33,7 +34,8 @@ private:
   void InitSessions();
   void SetSocketOptions();
   int sd; //socket descriptor
-  
+  std::vector<std::thread> threads;
+
 };
 
 #endif // SERVER_H

@@ -130,6 +130,9 @@ bool RequestsHandler::SendOperationClose()
 
 bool RequestsHandler::SendDeleteOperation(int position, int count)
 {
+    if (position < 0)
+        return true;
+
     std::string request = "delete " +
             std::to_string(position) +
             " " +
