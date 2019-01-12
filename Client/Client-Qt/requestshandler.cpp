@@ -137,10 +137,11 @@ bool RequestsHandler::SendDeleteOperation(int position, int count)
 
     Write(sd, request);
 
-    std::string response;
+  /*  std::string response;
     Read(sd,response);
 
-    return (response == "Succes");
+    return (response == "Succes");*/
+    return true;
 }
 
 bool RequestsHandler::SendInsertOperation(int position, const std::string &text)
@@ -152,12 +153,46 @@ bool RequestsHandler::SendInsertOperation(int position, const std::string &text)
 
     Write(sd, request);
 
-    std::string response;
+   /* std::string response;
     Read(sd,response);
 
-    return (response == "Succes");
+    return (response == "Succes");*/
+    return true;
 }
 
+std::string RequestsHandler::FetchUpdates()
+{
+    std::string tmpBuff;
+
+    fd_set readfds;
+    fd_set actfds;
+    struct timeval tv;
+
+    FD_ZERO(&actfds);
+    FD_SET(sd, &actfds);
+
+    tv.tv_sec = 0;
+    tv.tv_usec = 1;
+
+    int nfds = sd;
+
+    while (1)
+    {
+        bcopy ((char *) &actfds, (char *) &readfds, sizeof (readfds));
+
+        CHECK_ERROR(select (nfds+1, &readfds, NULL, NULL, &tv), "Select error");
+
+        if (FD_ISSET(sd, &readfds))
+        {
+            tmpBuff.clear();
+            Read(sd,tmpBuff);
+        }
+        else
+        {
+            return tmpBuff;
+        }
+    }
+}
 
 QStringList RequestsHandler::ExtractListOfFiles(
         QString data)

@@ -31,6 +31,8 @@ static void Write(int d, const char* data)
 
     CHECK_ERROR(write(d, &len, sizeof(int)), "Write no. of bytes");
     CHECK_ERROR(write(d, data, len), "Write data");
+    
+    printf("in write: %s\n", data);
 }
 
 void Write(int d, const std::string& data)

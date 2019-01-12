@@ -4,6 +4,7 @@
 #include <unistd.h>
 
 #include "utils.h"
+#include <QDebug>
 
 int Read(int d, std::string& buffer)
 {
@@ -21,6 +22,8 @@ int Read(int d, std::string& buffer)
 
     buffer.assign(memory);
     free(memory);
+
+    qDebug()<<"READ:" << QString::fromStdString(buffer);
     return len;
 }
 
@@ -30,6 +33,9 @@ static void Write(int d, const char* data)
 
     CHECK_ERROR(write(d, &len, sizeof(int)), "Write no. of bytes");
     CHECK_ERROR(write(d, data, len), "Write data");
+
+    qDebug()<<"WRITE:" << QString::fromStdString(data);
+
 }
 
 void Write(int d, const std::string& data)

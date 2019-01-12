@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <iostream>
 #include <sstream>
+#include <chrono>
+#include <ctime>
 
 #include "handlerthread.h"
 #include "utils.h"
@@ -33,18 +35,54 @@ void HandlerThread::Start()
 {
   std::string buffer;
   buffer.clear();
-  
+ 
+  fd_set readfds;
+  fd_set actfds;
+  struct timeval tv;
+
+  FD_ZERO(&actfds);
+  FD_SET(client, &actfds);
+
+  tv.tv_sec = 0;
+  tv.tv_usec = 10;
+
+  int nfds = client;
+
   int tries = 0;
-  while(1)
+  
+  auto start = std::chrono::system_clock::now();
+
+  while (1)
   {
-    if (Read(client, buffer))
+    bcopy ((char *) &actfds, (char *) &readfds, sizeof (readfds));
+
+    CHECK_ERROR(select (nfds+1, &readfds, NULL, NULL, &tv), "Select error");
+
+    if (FD_ISSET(client, &readfds))
     {
-      HandleMessage(buffer);
-      buffer.clear();
-    } else {
-        tries += 1;
-        if (tries >= MAX_EMPTY)
-            break;
+        if (Read(client, buffer))
+        {
+            HandleMessage(buffer);
+            buffer.clear();
+        } 
+        else 
+        {
+            tries += 1;
+            if (tries >= MAX_EMPTY)
+                break;
+        }
+    }
+    
+    if (sessionIdx != -1)
+    {
+        auto end = std::chrono::system_clock::now();
+        std::chrono::duration<double> elapsed = end-start;
+
+        if (elapsed.count() > 0.1)
+        {
+            SendUpdate();
+            start = std::chrono::system_clock::now();
+        }
     }
   }
 }
@@ -127,6 +165,18 @@ void HandlerThread::HandleMessage(const std::string& buffer)
   }
 }
 
+void HandlerThread::SendUpdate()
+{
+    if (sessionIdx != -1)
+    {
+        std::lock_guard<std::mutex> guard((*sessions)[sessionIdx]->content_mutex);
+        Session* session = (*sessions)[sessionIdx];
+
+        if (!session->content.empty())
+          Write(client, session->content);
+    }
+}
+
 void HandlerThread::HandleOperationStart()
 {
   (sessionIdx != -1) ?
@@ -151,7 +201,7 @@ void HandlerThread::HandleInsertOperation(int position, std::string text)
   Session* session = (*sessions)[sessionIdx];
   session->content.insert(position,text);
 
-  Write(client,"Succes");
+  //Write(client,"Succes");
 }
 
 void HandlerThread::HandleDeleteOperation(int position, int length)
@@ -161,7 +211,7 @@ void HandlerThread::HandleDeleteOperation(int position, int length)
   Session* session = (*sessions)[sessionIdx];
   session->content.erase(position,length);
 
-  Write(client, "Succes");
+  //Write(client, "Succes");
 }
 
 void HandlerThread::HandleRetrieveRequest()

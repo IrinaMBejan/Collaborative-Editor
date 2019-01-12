@@ -5,15 +5,14 @@
 #include <string>
 #include <QMessageBox>
 
-// TODO: add special text for showing
-#define CHECK_ERROR(operation, error) \
-({                                    \
-  if (operation == -1)                \
-  {                                   \
-    ShowNetworkError("");             \
-    perror(error);                    \
-    errno;                            \
-  }                                   \
+#define CHECK_ERROR(operation, error)             \
+({                                                \
+  if (operation == -1)                            \
+  {                                               \
+    ShowNetworkError("A network error occured!"); \
+    perror(error);                                \
+    errno;                                        \
+  }                                               \
 })
 
 #define ERROR(err)                    \

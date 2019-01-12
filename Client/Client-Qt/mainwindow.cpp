@@ -60,8 +60,9 @@ void MainWindow::on_createFile_clicked()
         return;
     }
 
-    // TODO: fix this
-    if (!filename.find(".", 1, filename.size()-1))
+    if (filename.find(".") == std::string::npos ||
+        filename[0] == '.' ||
+        filename[filename.size()-1] == '.')
     {
         ShowError("Please select a valid filename !");
         return;
@@ -142,7 +143,7 @@ void MainWindow::on_editFile_clicked()
 
     timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(SeekUpdates()));
-    timer->start(1000);
+    timer->start(500);
 
     EditQDockWidget* dock = new EditQDockWidget(filename, this);
     dock->setFloating(true);
@@ -163,6 +164,9 @@ void MainWindow::on_editFile_clicked()
 
 void MainWindow::SendClosingOperation()
 {
+    timer->stop();
+    SeekUpdates();
+
     qDebug() << "Closing operation...";
     if (!handler->SendOperationClose())
     {
@@ -196,7 +200,16 @@ void MainWindow::SendUpdateOnContentChange(
 
 void MainWindow::SeekUpdates()
 {
+    externUpdate = true;
+    QString str = QString::fromStdString(handler->FetchUpdates());
 
+    if (!str.isEmpty())
+    {
+        qDebug() << "applying updates";
+        ApplyUpdate(str);
+    }
+
+    externUpdate = false;
 }
 
 void MainWindow::ApplyUpdate(const QString &plaintext)

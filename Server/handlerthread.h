@@ -30,7 +30,9 @@ private:
   void HandleDeleteOperation(int position, int length);
   void HandleOperationStart();
   void HandleOperationClose();
-  
+
+  void SendUpdate();
+
   bool JoinSession(int sessIdx);
   bool ExitSession(int sessIdx);
   void InitSession();

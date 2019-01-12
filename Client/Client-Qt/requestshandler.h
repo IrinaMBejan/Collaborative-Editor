@@ -20,6 +20,8 @@ public:
     bool SendDeleteOperation(int position, int count);
     bool SendInsertOperation(int position, const std::string& text);
 
+    std::string FetchUpdates();
+
 private:
 
     QStringList ExtractListOfFiles(QString data);
