@@ -35,14 +35,15 @@ private:
     void WriteDataToFile(const QString &data, const QString &path);
     void RefreshDataTable();
     void ShowError(QString err);
-    void ApplyUpdate(const QString &plaintext);
+    void ApplyUpdate(const QString &plaintext, int cursorPos);
 
 private slots:
     void SendClosingOperation();
     void SendUpdateOnContentChange(int position,
                                    int charsRemoved,
-                                   int charsAdded);
+                                   QString charsAdded);
     void SeekUpdates();
+    void SendUpdateCursorChange(int);
 
 private:
     Ui::MainWindow *ui;
@@ -62,7 +63,19 @@ signals:
 
 public:
     using QDockWidget::QDockWidget;
-    void closeEvent(QCloseEvent *);
+    void closeEvent(QCloseEvent *) override;
+};
+
+class QPlainTextEditView: public QPlainTextEdit {
+    Q_OBJECT
+
+public:
+    using QPlainTextEdit::QPlainTextEdit;
+    void keyPressEvent(QKeyEvent *e) override;
+
+signals:
+    void contentsChange(int, int, QString);
+    void cursorChange(int);
 };
 
 #endif // MAINWINDOW_H

@@ -19,8 +19,9 @@ public:
 
     bool SendDeleteOperation(int position, int count);
     bool SendInsertOperation(int position, const std::string& text);
+    bool SendCursorOperation(int diff);
 
-    std::string FetchUpdates();
+    void FetchUpdates(QString& text, int& pos);
 
 private:
 

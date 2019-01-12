@@ -1,4 +1,4 @@
-﻿#include "mainwindow.h"
+#include "mainwindow.h"
 #include "ui_mainwindow.h"
 
 #include <QMessageBox>
@@ -148,14 +148,17 @@ void MainWindow::on_editFile_clicked()
     EditQDockWidget* dock = new EditQDockWidget(filename, this);
     dock->setFloating(true);
 
-    editor = new QPlainTextEdit(dock);
-    QObject::connect(editor->document(), SIGNAL(contentsChange(int,int,int)),
-                     this, SLOT(SendUpdateOnContentChange(int,int,int)));
+    editor = new QPlainTextEditView(dock);
+    QObject::connect(editor, SIGNAL(contentsChange(int,int,QString)),
+                     this, SLOT(SendUpdateOnContentChange(int,int,QString)));
+    QObject::connect(editor, SIGNAL(cursorChange(int)),
+                     this, SLOT(SendUpdateCursorChange(int)));
     QObject::connect(dock, SIGNAL(onClosing()),
                      this, SLOT(SendClosingOperation()));
 
     dock->setWidget(editor);
-    editor->setPlainText(data);
+
+    SendUpdateOnContentChange(0,0,data);
     dock->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
     dock->setMinimumSize(QSize(600,800));
 
@@ -175,13 +178,21 @@ void MainWindow::SendClosingOperation()
     }
 }
 
-void MainWindow::SendUpdateOnContentChange(
-        int position, int charsRemoved, int charsAdded)
+void MainWindow::SendUpdateCursorChange(int diff)
 {
-    if (externUpdate)
-    {
+    if (!diff)
         return;
-    }
+
+    handler->SendCursorOperation(diff);
+}
+
+void MainWindow::SendUpdateOnContentChange(
+        int position, int charsRemoved, QString charsAdded)
+{
+//    if (externUpdate)
+//    {
+//        return;
+//    }
 
     if (charsRemoved)
     {
@@ -189,11 +200,11 @@ void MainWindow::SendUpdateOnContentChange(
                                      charsRemoved);
     }
 
-    if (charsAdded)
+    if (!charsAdded.isEmpty())
     {
         handler->SendInsertOperation(
                     position,
-                    editor->toPlainText().mid(position, charsAdded).toStdString());
+                    charsAdded.toStdString());
     }
 
 }
@@ -201,27 +212,32 @@ void MainWindow::SendUpdateOnContentChange(
 void MainWindow::SeekUpdates()
 {
     externUpdate = true;
-    QString str = QString::fromStdString(handler->FetchUpdates());
+    QString str;
+    int cursorPos;
+
+    str.clear();
+
+    handler->FetchUpdates(str, cursorPos);
 
     if (!str.isEmpty())
     {
         qDebug() << "applying updates";
-        ApplyUpdate(str);
+        ApplyUpdate(str, cursorPos);
     }
 
     externUpdate = false;
 }
 
-void MainWindow::ApplyUpdate(const QString &plaintext)
+void MainWindow::ApplyUpdate(const QString &plaintext, int cursorPos)
 {
     externUpdate = true;
 
-    QTextCursor oldCursor = editor->textCursor();
-    int pos = oldCursor.position();
-
     editor->setPlainText(plaintext);
+    if (plaintext.length()-1 < cursorPos)
+        cursorPos = plaintext.length()-1;
 
-    oldCursor.setPosition(pos);
+    QTextCursor oldCursor = editor->textCursor();
+    oldCursor.setPosition(cursorPos);
     editor->setTextCursor(oldCursor);
 
     externUpdate = false;
@@ -295,4 +311,30 @@ void EditQDockWidget::closeEvent(QCloseEvent *event)
 {
     emit onClosing();
     event->accept();
+}
+
+void QPlainTextEditView::keyPressEvent(QKeyEvent *e)
+{
+    qDebug() << "Avem o tasta"<< e->key();
+
+    switch (e->key())
+    {
+        case Qt::Key_Backspace:
+            emit contentsChange(textCursor().position()-1, 1, "");
+            break;
+        case Qt::Key_Delete:
+            emit contentsChange(textCursor().position()-1, 1, "");
+            break;
+        case Qt::Key_Left:
+            emit cursorChange(-1);
+            break;
+        case Qt::Key_Right:
+            emit cursorChange(1);
+            break;
+        default:
+            emit contentsChange(textCursor().position(), 0, e->text());
+            break;
+    }
+
+    e->ignore();
 }

@@ -28,6 +28,7 @@ private:
   void HandleEditRequest(const std::string& filename);
   void HandleInsertOperation(int position, std::string text);
   void HandleDeleteOperation(int position, int length);
+  void HandleCursorOperation(int delta);
   void HandleOperationStart();
   void HandleOperationClose();
 

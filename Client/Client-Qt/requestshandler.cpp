@@ -137,10 +137,6 @@ bool RequestsHandler::SendDeleteOperation(int position, int count)
 
     Write(sd, request);
 
-  /*  std::string response;
-    Read(sd,response);
-
-    return (response == "Succes");*/
     return true;
 }
 
@@ -153,16 +149,24 @@ bool RequestsHandler::SendInsertOperation(int position, const std::string &text)
 
     Write(sd, request);
 
-   /* std::string response;
-    Read(sd,response);
-
-    return (response == "Succes");*/
     return true;
 }
 
-std::string RequestsHandler::FetchUpdates()
+bool RequestsHandler::SendCursorOperation(int diff)
+{
+    std::string request = "cursor " +
+            std::to_string(diff);
+
+    Write(sd, request);
+
+    return true;
+}
+
+void RequestsHandler::FetchUpdates(QString& text, int& pos)
 {
     std::string tmpBuff;
+    std::string cursorBuff;
+    int cursorPos =0;
 
     fd_set readfds;
     fd_set actfds;
@@ -185,11 +189,17 @@ std::string RequestsHandler::FetchUpdates()
         if (FD_ISSET(sd, &readfds))
         {
             tmpBuff.clear();
+            cursorBuff.clear();
             Read(sd,tmpBuff);
+            Read(sd, cursorBuff);
+
+            cursorPos = std::stoi(cursorBuff);
         }
         else
         {
-            return tmpBuff;
+            text = QString::fromStdString(tmpBuff);
+            pos = cursorPos;
+            return;
         }
     }
 }

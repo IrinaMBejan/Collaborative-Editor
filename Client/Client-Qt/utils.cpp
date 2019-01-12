@@ -27,6 +27,11 @@ int Read(int d, std::string& buffer)
     return len;
 }
 
+void ReadNumber(int d, int number)
+{
+    CHECK_ERROR((read(d, &number, sizeof(int))),"Read no. of bytes");
+}
+
 static void Write(int d, const char* data)
 {
     int len = strlen(data);

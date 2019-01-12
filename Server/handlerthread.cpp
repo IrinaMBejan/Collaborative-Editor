@@ -22,6 +22,7 @@ static constexpr const char* operations_init = "operations start";
 static constexpr const char* operations_close = "operations close";
 static constexpr const char* operation_insert = "insert (\\d+) ([\\s\\S]+)";
 static constexpr const char* operation_delete = "delete (\\d+) (\\d+)";
+static constexpr const char* operation_cursor = "cursor (-?\\d+)";
 static constexpr const char* create_file = 
   "create file ([\\w\\d]+.[\\w\\d]+)";
 static constexpr const char* download_file = 
@@ -103,6 +104,7 @@ void HandlerThread::HandleMessage(const std::string& buffer)
   std::regex operations_close_reg(operations_close);
   std::regex operations_insert_reg(operation_insert);
   std::regex operations_delete_reg(operation_delete);
+  std::regex operations_cursor_reg(operation_cursor);
 
   if (std::regex_match(buffer, retrieve_list_reg))
   {
@@ -158,6 +160,14 @@ void HandlerThread::HandleMessage(const std::string& buffer)
       HandleDeleteOperation(position, size);
     }
   }
+  else if (std::regex_match(buffer, matches, operations_cursor_reg))
+  {
+    if (matches.size() == 2)
+    {
+      int delta = std::stoi(matches[1].str());
+      HandleCursorOperation(delta);
+    }
+  }
   else 
   {
     printf("Don't know how to treat this: %s\n", buffer.c_str());
@@ -173,7 +183,10 @@ void HandlerThread::SendUpdate()
         Session* session = (*sessions)[sessionIdx];
 
         if (!session->content.empty())
-          Write(client, session->content);
+        {
+            Write(client, session->content);
+            Write(client, std::to_string(session->cursorPosition[client]));
+        }
     }
 }
 
@@ -194,6 +207,14 @@ void HandlerThread::HandleOperationClose()
   }
 }
 
+void HandlerThread::HandleCursorOperation(int delta)
+{
+  std::lock_guard<std::mutex> guard((*sessions)[sessionIdx]->content_mutex);
+
+  Session* session = (*sessions)[sessionIdx];
+  session->cursorPosition[client]+= delta;
+}
+
 void HandlerThread::HandleInsertOperation(int position, std::string text)
 {
   std::lock_guard<std::mutex> guard((*sessions)[sessionIdx]->content_mutex);
@@ -201,7 +222,11 @@ void HandlerThread::HandleInsertOperation(int position, std::string text)
   Session* session = (*sessions)[sessionIdx];
   session->content.insert(position,text);
 
-  //Write(client,"Succes");
+  for (auto& cursor : session->cursorPosition)
+  {
+    if (position <= cursor.second)
+      cursor.second += position;
+  }
 }
 
 void HandlerThread::HandleDeleteOperation(int position, int length)
@@ -211,7 +236,13 @@ void HandlerThread::HandleDeleteOperation(int position, int length)
   Session* session = (*sessions)[sessionIdx];
   session->content.erase(position,length);
 
-  //Write(client, "Succes");
+  for (auto& cursor : session->cursorPosition)
+  {
+    if (position <= cursor.second && length == 1)
+      cursor.second--;
+    // TODO: update for longer text
+  }
+
 }
 
 void HandlerThread::HandleRetrieveRequest()
@@ -282,7 +313,6 @@ void HandlerThread::HandleDownloadRequest(const std::string& filename)
 void HandlerThread::HandleEditRequest(const std::string& filename)
 {
   // Locks reading from map - maybe a RW lock?
- 
   std::lock_guard<std::mutex> lock((*sessions_mutex));
   
   if ((*fileToSession).find(filename) == (*fileToSession).end())
@@ -290,7 +320,6 @@ void HandlerThread::HandleEditRequest(const std::string& filename)
     Write(client, "Rejected");
     return;
   }
-  
   sessionIdx = (*fileToSession)[filename];
   if (!JoinSession(sessionIdx))
   {
@@ -304,9 +333,8 @@ void HandlerThread::HandleEditRequest(const std::string& filename)
 bool HandlerThread::JoinSession(int sessIdx)
 {
   // Write Session lock
- 
   std::lock_guard<std::mutex> lock((*sessions)[sessIdx]->content_mutex);
-  
+ 
   auto& tmpClients = (*sessions)[sessIdx]->clients;
   
   if (tmpClients.size() == SESSION_CLIENTS_MAX)
@@ -316,6 +344,7 @@ bool HandlerThread::JoinSession(int sessIdx)
   }
   
   tmpClients.push_back(client);
+  (*sessions)[sessIdx]->cursorPosition[client]=0;
   return true;
 }
 
@@ -342,5 +371,6 @@ bool HandlerThread::ExitSession(int sessIdx)
   it = std::find(tmpClients.begin(), tmpClients.end(), client);
 
   tmpClients.erase(it);
+  (*sessions)[sessIdx]->cursorPosition.erase(client);
   return true;
 }
