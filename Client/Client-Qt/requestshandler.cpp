@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+#include <regex>
 
 #include <QDebug>
 #define PORT 2985
@@ -15,16 +16,24 @@
 
 RequestsHandler::RequestsHandler()
 {
+}
+
+bool RequestsHandler::TryConnect()
+{
     struct sockaddr_in server;
 
-    CHECK_ERROR((sd = socket(AF_INET, SOCK_STREAM,0)), "Socket error");
+    if ((sd = socket(AF_INET, SOCK_STREAM,0)) < 0)
+        return false;
 
     server.sin_family = AF_INET;
     server.sin_addr.s_addr = inet_addr(SERVER_ADDRESS);
     server.sin_port = htons(PORT);
 
-    CHECK_ERROR(connect(sd, (struct sockaddr *) &server,
-                        sizeof(struct sockaddr)), "Connect error");
+    if (connect(sd, (struct sockaddr *) &server,
+                        sizeof(struct sockaddr)) < 0)
+        return false;
+
+    return true;
 }
 
 bool RequestsHandler::SendLoginRequest(const std::string& user,
@@ -165,11 +174,10 @@ bool RequestsHandler::SendCursorOperation(int diff)
     return true;
 }
 
-void RequestsHandler::FetchUpdates(QString& text, int& pos)
+bool RequestsHandler::FetchUpdates(QString& text, int& pos)
 {
     std::string tmpBuff;
     std::string cursorBuff;
-    int cursorPos =0;
 
     fd_set readfds;
     fd_set actfds;
@@ -183,28 +191,44 @@ void RequestsHandler::FetchUpdates(QString& text, int& pos)
 
     int nfds = sd;
 
-    while (1)
+    std::regex plaintext("text ([\\s\\S]*)");
+    std::regex cursor("cursor (\\d+)");
+    std::smatch matches;
+
+
+    bcopy ((char *) &actfds, (char *) &readfds, sizeof (readfds));
+
+    CHECK_ERROR(select (nfds+1, &readfds, NULL, NULL, &tv), "Select error");
+
+    if (FD_ISSET(sd, &readfds))
     {
-        bcopy ((char *) &actfds, (char *) &readfds, sizeof (readfds));
+        tmpBuff.clear();
+        cursorBuff.clear();
+        Read(sd, tmpBuff);
+        Read(sd, cursorBuff);
 
-        CHECK_ERROR(select (nfds+1, &readfds, NULL, NULL, &tv), "Select error");
-
-        if (FD_ISSET(sd, &readfds))
+        int match = 0;
+        if (std::regex_match(tmpBuff, matches, plaintext) &&
+                matches.size() == 2)
         {
-            tmpBuff.clear();
-            cursorBuff.clear();
-            Read(sd,tmpBuff);
-            Read(sd, cursorBuff);
-
-            cursorPos = std::stoi(cursorBuff);
+            text = QString::fromStdString(matches[1].str());
+            match++;
         }
-        else
+
+        if (std::regex_match(cursorBuff, matches, cursor) &&
+                matches.size() == 2)
         {
-            text = QString::fromStdString(tmpBuff);
-            pos = cursorPos;
-            return;
+            pos = std::stoi(matches[1].str());
+            match++;
+        }
+        if (match == 2)
+        {
+            qDebug() << "match\n";
+
+            return true;
         }
     }
+    return false;
 }
 
 QStringList RequestsHandler::ExtractListOfFiles(

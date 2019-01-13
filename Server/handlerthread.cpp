@@ -76,7 +76,7 @@ void HandlerThread::Start()
         auto end = std::chrono::system_clock::now();
         std::chrono::duration<double> elapsed = end-start;
 
-        if (elapsed.count() > 0.1)
+        if (elapsed.count() > 0.2)
         {
             SendUpdate();
             start = std::chrono::system_clock::now();
@@ -178,9 +178,15 @@ void HandlerThread::SendUpdate()
     {
         std::lock_guard<std::mutex> guard((*sessions)[sessionIdx]->content_mutex);
         Session* session = (*sessions)[sessionIdx];
-
-        Write(client, session->content);
-        Write(client, std::to_string(session->cursorPosition[client]));
+        
+        if (lastVersion != session->content || 
+                lastPos != session->cursorPosition[client])
+        {
+            lastVersion = session->content;
+            lastPos = session->cursorPosition[client];
+            Write(client, "text " + session->content);
+            Write(client, "cursor " + std::to_string(session->cursorPosition[client]));
+        }
     }
 }
 
@@ -323,6 +329,8 @@ void HandlerThread::HandleDownloadRequest(const std::string& filename)
 
 void HandlerThread::HandleEditRequest(const std::string& filename)
 {
+  lastVersion = "init";
+  lastPos = -1;
   // Locks reading from map - maybe a RW lock?
   std::lock_guard<std::mutex> lock((*sessions_mutex));
   

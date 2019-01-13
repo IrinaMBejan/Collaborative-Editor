@@ -43,6 +43,8 @@ private:
   
   std::string currentFilename;
   int sessionIdx;
+  std::string lastVersion;
+  int lastPos;
 
   std::vector<Session*> *sessions;
   std::mutex *sessions_mutex;

@@ -35,6 +35,13 @@ MainWindow::~MainWindow()
 
 void MainWindow::on_pushButton_clicked()
 {
+    if (!handler->TryConnect())
+    {
+        ShowError(
+             "We're trying to connect again to the server, please retry !");
+        return;
+    }
+
     std::string user = ui->userField->text().toStdString();
     std::string pass = ui->passField->text().toStdString();
 
@@ -129,7 +136,7 @@ void MainWindow::on_editFile_clicked()
 
     timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(SeekUpdates()));
-    timer->start(500);
+    timer->start(100);
 
     EditQDockWidget* dock = new EditQDockWidget(filename, this);
     dock->setFloating(true);
@@ -202,9 +209,7 @@ void MainWindow::SeekUpdates()
 
     str.clear();
 
-    handler->FetchUpdates(str, cursorPos);
-
-    if (!str.isEmpty())
+    if (handler->FetchUpdates(str, cursorPos))
     {
         qDebug() << "applying updates";
         ApplyUpdate(str, cursorPos);

@@ -8,6 +8,7 @@ class RequestsHandler
 public:
     RequestsHandler();
 
+    bool TryConnect();
     bool SendLoginRequest(const std::string& user, const std::string& pass);
     bool SendRetrieveFilesRequest(QStringList& list);
     bool SendDownloadFileRequest(QString filename, QString& data);
@@ -21,7 +22,7 @@ public:
     bool SendInsertOperation(int position, const std::string& text);
     bool SendCursorOperation(int diff);
 
-    void FetchUpdates(QString& text, int& pos);
+    bool FetchUpdates(QString& text, int& pos);
 
 private:
 
