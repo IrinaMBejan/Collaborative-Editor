@@ -13,7 +13,10 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
-    handler = new RequestsHandler();
+    handler = new RequestsHandler(this);
+
+    QObject::connect(handler, SIGNAL(notifyServerDown()),
+                     this, SLOT(on_server_down()));
 
     ui->setupUi(this);
     ui->Filelist->setVisible(0);
@@ -130,7 +133,7 @@ void MainWindow::on_editFile_clicked()
 
     if (!handler->SendEditRequest(filename.toStdString()))
     {
-        ShowError("Session is full for this file!");
+        ShowError("Session is full for this file or server is down =( !");
         return;
     }
 
@@ -138,7 +141,7 @@ void MainWindow::on_editFile_clicked()
     connect(timer, SIGNAL(timeout()), this, SLOT(SeekUpdates()));
     timer->start(100);
 
-    EditQDockWidget* dock = new EditQDockWidget(filename, this);
+    dock = new EditQDockWidget(filename, this);
     dock->setFloating(true);
 
     editor = new QPlainTextEditView(dock);
@@ -157,6 +160,13 @@ void MainWindow::on_editFile_clicked()
     dock->show();
 }
 
+void MainWindow::on_server_down()
+{
+    dock->close();
+    ui->Loginform->setVisible(1);
+    ui->Filelist->setVisible(0);
+}
+
 void MainWindow::SendClosingOperation()
 {
     timer->stop();
@@ -165,7 +175,7 @@ void MainWindow::SendClosingOperation()
     qDebug() << "Closing operation...";
     if (!handler->SendOperationClose())
     {
-        ShowError("Something went wrong");
+        ShowError("Something went wrong in the server !");
         return;
     }
 }
@@ -294,35 +304,3 @@ void MainWindow::RefreshDataTable()
     }
 }
 
-
-void EditQDockWidget::closeEvent(QCloseEvent *event)
-{
-    emit onClosing();
-    event->accept();
-}
-
-void QPlainTextEditView::keyPressEvent(QKeyEvent *e)
-{
-    qDebug() << "Avem o tasta"<< e->key();
-
-    switch (e->key())
-    {
-        case Qt::Key_Backspace:
-            emit contentsChange(textCursor().position()-1, 1, "");
-            break;
-        case Qt::Key_Delete:
-            emit contentsChange(textCursor().position()-1, 1, "");
-            break;
-        case Qt::Key_Left:
-            emit cursorChange(-1);
-            break;
-        case Qt::Key_Right:
-            emit cursorChange(1);
-            break;
-        default:
-            emit contentsChange(textCursor().position(), 0, e->text());
-            break;
-    }
-
-    e->ignore();
-}

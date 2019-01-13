@@ -11,29 +11,13 @@
 #include <regex>
 
 #include <QDebug>
-#define PORT 2985
-#define SERVER_ADDRESS "127.0.0.1"
-
-RequestsHandler::RequestsHandler()
-{
-}
 
 bool RequestsHandler::TryConnect()
 {
-    struct sockaddr_in server;
-
     if ((sd = socket(AF_INET, SOCK_STREAM,0)) < 0)
         return false;
 
-    server.sin_family = AF_INET;
-    server.sin_addr.s_addr = inet_addr(SERVER_ADDRESS);
-    server.sin_port = htons(PORT);
-
-    if (connect(sd, (struct sockaddr *) &server,
-                        sizeof(struct sockaddr)) < 0)
-        return false;
-
-    return true;
+    return Connect(sd);
 }
 
 bool RequestsHandler::SendLoginRequest(const std::string& user,
@@ -46,10 +30,12 @@ bool RequestsHandler::SendLoginRequest(const std::string& user,
 
     if (!user.empty() && !pass.empty())
     {
-        Write(sd,request);
+        if (!WriteS(sd,request))
+            return false;
 
         std::string response;
-        Read(sd,response);
+        if (!ReadS(sd,response))
+            return false;
 
         return (response == "Succes");
     }
@@ -60,16 +46,21 @@ bool RequestsHandler::SendLoginRequest(const std::string& user,
 bool RequestsHandler::SendRetrieveFilesRequest(QStringList& list)
 {
     std::string request = "retrieve files";
-    Write(sd, request);
+    if (!WriteS(sd, request))
+        return false;
 
     std::string response;
-    Read(sd,response);
+
+    if (!ReadS(sd,response))
+        return false;
 
     if (response == "Succes")
     {
         std::string data;
 
-        Read(sd, data);
+        if (!ReadS(sd, data))
+            return false;
+
         list = ExtractListOfFiles(QString::fromStdString(data));
     }
     return (response == "Succes");
@@ -78,16 +69,20 @@ bool RequestsHandler::SendRetrieveFilesRequest(QStringList& list)
 bool RequestsHandler::SendDownloadFileRequest(QString filename, QString& result)
 {
     std::string request = "download file " + filename.toStdString();
-    Write(sd, request);
+    if (!WriteS(sd, request))
+        return false;
 
     std::string response;
-    Read(sd,response);
+    if (!ReadS(sd,response))
+        return false;
 
     if (response == "Succes")
     {
         std::string data;
 
-        Read(sd, data);
+        if (!ReadS(sd, data))
+            return false;
+
         result = QString::fromStdString(data);
     }
     return (response == "Succes");
@@ -96,10 +91,12 @@ bool RequestsHandler::SendDownloadFileRequest(QString filename, QString& result)
 bool RequestsHandler::SendCreateFileRequest(std::string filename)
 {
     std::string request = "create file " + filename;
-    Write(sd, request);
+    if (!WriteS(sd, request))
+        return false;
 
     std::string response;
-    Read(sd,response);
+    if (!ReadS(sd,response))
+        return false;
 
     return (response == "Succes");
 }
@@ -107,10 +104,12 @@ bool RequestsHandler::SendCreateFileRequest(std::string filename)
 bool RequestsHandler::SendEditRequest(std::string filename)
 {
     std::string request = "edit file " + filename;
-    Write(sd, request);
+    if (!WriteS(sd, request))
+        return false;
 
     std::string response;
-    Read(sd,response);
+    if (!ReadS(sd,response))
+        return false;
 
     return (response == "Succes");
 }
@@ -118,10 +117,12 @@ bool RequestsHandler::SendEditRequest(std::string filename)
 bool RequestsHandler::SendOperationInit()
 {
     std::string request = "operations start";
-    Write(sd, request);
+    if (!WriteS(sd, request))
+        return false;
 
     std::string response;
-    Read(sd,response);
+    if (!ReadS(sd,response))
+        return false;
 
     return (response == "Succes");
 }
@@ -129,10 +130,12 @@ bool RequestsHandler::SendOperationInit()
 bool RequestsHandler::SendOperationClose()
 {
     std::string request = "operations close";
-    Write(sd, request);
+    if (!WriteS(sd, request))
+        return false;
 
     std::string response;
-    Read(sd,response);
+    if (!ReadS(sd,response))
+        return false;
 
     return (response == "Succes");
 }
@@ -147,9 +150,7 @@ bool RequestsHandler::SendDeleteOperation(int position, int count)
             " " +
             std::to_string(count);
 
-    Write(sd, request);
-
-    return true;
+    return WriteS(sd, request);
 }
 
 bool RequestsHandler::SendInsertOperation(int position, const std::string &text)
@@ -159,9 +160,7 @@ bool RequestsHandler::SendInsertOperation(int position, const std::string &text)
             " " +
             text;
 
-    Write(sd, request);
-
-    return true;
+    return WriteS(sd, request);
 }
 
 bool RequestsHandler::SendCursorOperation(int diff)
@@ -169,9 +168,7 @@ bool RequestsHandler::SendCursorOperation(int diff)
     std::string request = "cursor " +
             std::to_string(diff);
 
-    Write(sd, request);
-
-    return true;
+    return WriteS(sd, request);
 }
 
 bool RequestsHandler::FetchUpdates(QString& text, int& pos)
@@ -204,8 +201,10 @@ bool RequestsHandler::FetchUpdates(QString& text, int& pos)
     {
         tmpBuff.clear();
         cursorBuff.clear();
-        Read(sd, tmpBuff);
-        Read(sd, cursorBuff);
+        if (!ReadS(sd, tmpBuff))
+            return false;
+        if (!ReadS(sd, cursorBuff))
+            return false;
 
         int match = 0;
         if (std::regex_match(tmpBuff, matches, plaintext) &&
@@ -229,6 +228,28 @@ bool RequestsHandler::FetchUpdates(QString& text, int& pos)
         }
     }
     return false;
+}
+
+bool RequestsHandler::ReadS(int d, std::string &buffer)
+{
+    if (!Read(d,buffer))
+    {
+        emit notifyServerDown();
+        return false;
+    }
+
+    return true;
+}
+
+bool RequestsHandler::WriteS(int d, const std::string &data)
+{
+    if (!Write(d, data))
+    {
+        emit notifyServerDown();
+        return false;
+    }
+
+    return true;
 }
 
 QStringList RequestsHandler::ExtractListOfFiles(

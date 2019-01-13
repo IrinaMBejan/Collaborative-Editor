@@ -3,22 +3,40 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <errno.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+
 #include "utils.h"
 #include <QDebug>
 
-int Read(int d, std::string& buffer)
+
+#define PORT 2985
+#define SERVER_ADDRESS "127.0.0.1"
+
+bool Read(int d, std::string& buffer)
 {
     int len = 0;
 
-    CHECK_ERROR((read(d, &len, sizeof(int))),"Read no. of bytes");
+    if (read(d, &len, sizeof(int))<0)
+    {
+        return false;
+    }
+
     if (!len)
-        return 0;
+        return false;
 
     char *memory = (char*)malloc((len + 1) * sizeof(char));
     if (memory == NULL) ERROR("Allocation");
     memset(memory, 0, len+1);
 
-    CHECK_ERROR(read(d, memory, len), "Read data");
+    if(read(d, memory, len) < 0)
+    {
+        return false;
+    }
 
     buffer.assign(memory);
     free(memory);
@@ -27,25 +45,21 @@ int Read(int d, std::string& buffer)
     return len;
 }
 
-void ReadNumber(int d, int number)
-{
-    CHECK_ERROR((read(d, &number, sizeof(int))),"Read no. of bytes");
-}
-
-static void Write(int d, const char* data)
+static bool Write(int d, const char* data)
 {
     int len = strlen(data);
 
-    CHECK_ERROR(write(d, &len, sizeof(int)), "Write no. of bytes");
-    CHECK_ERROR(write(d, data, len), "Write data");
+    if (write(d, &len, sizeof(int)) <0) return false;
+    if (write(d, data, len) <0) return false;
 
     qDebug()<<"WRITE:" << QString::fromStdString(data);
 
+    return true;
 }
 
-void Write(int d, const std::string& data)
+bool Write(int d, const std::string& data)
 {
-  Write(d, data.c_str());
+  return Write(d, data.c_str());
 }
 
 void ShowNetworkError(const char* err)
@@ -53,4 +67,16 @@ void ShowNetworkError(const char* err)
     QMessageBox msgBox;
     msgBox.setText(err);
     msgBox.exec();
+}
+
+bool Connect(int d)
+{
+    struct sockaddr_in server;
+
+    server.sin_family = AF_INET;
+    server.sin_addr.s_addr = inet_addr(SERVER_ADDRESS);
+    server.sin_port = htons(PORT);
+
+    return (connect(d, (struct sockaddr *) &server,
+                            sizeof(struct sockaddr)) != -1);
 }

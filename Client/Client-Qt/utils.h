@@ -23,12 +23,13 @@
 
 // Reads from descripter d the number of bytes sent through the channel,
 // allocates the memory and read it.
-int Read(int d, std::string& buffer);
-void ReadNumber(int d, int number);
+bool Read(int d, std::string& buffer);
 
 // Writes to given descriptor the number of bytes to be written and then
 // the data itself.
-void Write(int d, const std::string& data);
+bool Write(int d, const std::string& data);
+
+bool Connect(int d);
 
 void ShowNetworkError(const char* err);
 #endif // UTILS_H

@@ -28,12 +28,14 @@ SOURCES += \
         main.cpp \
         mainwindow.cpp \
     requestshandler.cpp \
-    utils.cpp
+    utils.cpp \
+    editqdockwidget.cpp
 
 HEADERS += \
         mainwindow.h \
     requestshandler.h \
-    utils.h
+    utils.h \
+    editqdockwidget.h
 
 FORMS += \
         mainwindow.ui

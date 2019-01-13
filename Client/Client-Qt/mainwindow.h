@@ -7,6 +7,7 @@
 #include <QDebug>
 
 #include "requestshandler.h"
+#include "editqdockwidget.h"
 
 namespace Ui {
 class MainWindow;
@@ -29,6 +30,8 @@ private slots:
 
     void on_editFile_clicked();
 
+    void on_server_down();
+
 private:
 
     void SaveFileAs(const QString &data, const QString &filename);
@@ -49,33 +52,9 @@ private:
     Ui::MainWindow *ui;
     RequestsHandler *handler;
     QPlainTextEdit* editor;
+    EditQDockWidget* dock;
     QTimer* timer;
     bool externUpdate;
-};
-
-
-class EditQDockWidget : public QDockWidget {
-
-    Q_OBJECT
-
-signals:
-    void onClosing();
-
-public:
-    using QDockWidget::QDockWidget;
-    void closeEvent(QCloseEvent *) override;
-};
-
-class QPlainTextEditView: public QPlainTextEdit {
-    Q_OBJECT
-
-public:
-    using QPlainTextEdit::QPlainTextEdit;
-    void keyPressEvent(QKeyEvent *e) override;
-
-signals:
-    void contentsChange(int, int, QString);
-    void cursorChange(int);
 };
 
 #endif // MAINWINDOW_H

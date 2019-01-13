@@ -1,12 +1,15 @@
 #ifndef REQUESTSHANDLER_H
 #define REQUESTSHANDLER_H
 #include <QString>
+#include <QObject>
 #include <vector>
 
-class RequestsHandler
+class RequestsHandler: public QObject
 {
+    Q_OBJECT
+
 public:
-    RequestsHandler();
+    explicit RequestsHandler(QObject *parent = nullptr): QObject(parent) {}
 
     bool TryConnect();
     bool SendLoginRequest(const std::string& user, const std::string& pass);
@@ -23,6 +26,11 @@ public:
     bool SendCursorOperation(int diff);
 
     bool FetchUpdates(QString& text, int& pos);
+    bool ReadS(int d, std::string& buffer);
+    bool WriteS(int d, const std::string& data);
+
+signals:
+    void notifyServerDown();
 
 private:
 
