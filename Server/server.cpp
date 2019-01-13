@@ -2,6 +2,8 @@
 #include <thread>
 #include <vector>
 #include <map>
+#include <fstream>
+#include <iostream>
 
 #include "handlerthread.h"
 #include "server.h"
@@ -14,6 +16,7 @@ static constexpr const char* folder =
 std::vector<Session*> sessions;
 std::mutex sessions_mutex;
 std::map<std::string, int> fileToSession;
+std::map<std::string, int> sz;
 
 Server::Server()
 {
@@ -42,6 +45,24 @@ void Server::SetSocketOptions()
   setsockopt(sd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on));
 }
 
+static std::string LoadData(const std::string& filename)
+{
+  std::string filepath = folder+filename;
+  std::string tmp;  
+  std::ifstream t;
+  std::stringstream buffer;
+  
+  t.open(filepath);
+  while (!t.eof())
+  {
+    getline(t, tmp);
+    buffer << tmp;
+  }
+  t.close();
+
+  return buffer.str();
+}
+
 void Server::InitSessions()
 {
   std::string filepath = folder;
@@ -56,8 +77,74 @@ void Server::InitSessions()
     
     Session* tmpSession = new Session();
     tmpSession->filename = fname;
+    tmpSession->content = LoadData(fname);
     fileToSession[fname] = sessions.size();
     sessions.push_back(tmpSession);
+  }
+}
+
+static void SaveSessionOnDisk(Session* sess)
+{
+  std::lock_guard<std::mutex> guard(sess->content_mutex);
+
+  if (sess->clients.size())
+  {
+    std::ofstream file;
+    file.open("files/"+sess->filename);
+    file << sess->content;
+    file.close();
+
+  }
+
+  sz[sess->filename]= sess->content.size();
+}
+
+static void SaveSessions()
+{
+  std::lock_guard<std::mutex> guard(sessions_mutex);
+
+  for (auto session: sessions)
+  {
+    SaveSessionOnDisk(session);
+  }
+}
+
+static void RefreshList()
+{
+  std::lock_guard<std::mutex> guard(sessions_mutex);
+
+  std::cout<<"refreshing list"<<std::endl;
+  std::map<std::string, int>::iterator it;
+
+  std::string filepath = "files/list.csv";
+  CSVWriter listUpdate(filepath);
+
+  for ( it = sz.begin(); it != sz.end(); it++ )
+  {
+    CSVRow row;
+    row.Add(it->first);
+    row.Add(std::to_string(it->second));
+
+    std::cout<<"row is "<<it->first <<" "<<it->second<<std::endl;
+    it == sz.begin() ? listUpdate.AddRow(row, true) : listUpdate.AddRow(row);
+  }
+}
+
+static void BackgroundSaveToDisk()
+{
+  auto start = std::chrono::system_clock::now();
+
+  while(1)
+  {
+    auto end = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed = end-start;
+
+    if (elapsed.count() > 10)
+    {
+      SaveSessions();
+      RefreshList();
+      start = std::chrono::system_clock::now(); 
+    }
   }
 }
 
@@ -124,6 +211,8 @@ void Server::StartListening()
  
   std::vector<std::thread> v;
 
+  threads.push_back(std::thread(BackgroundSaveToDisk));
+  
   while (1)
   {
     int client;
@@ -142,3 +231,4 @@ void Server::StartListening()
 
   std::for_each(threads.begin(),threads.end(),JoinThread);
 }
+

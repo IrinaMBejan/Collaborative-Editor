@@ -23,6 +23,8 @@ extern std::vector<Session*> sessions;
 extern std::mutex sessions_mutex;
 extern std::map<std::string, int> fileToSession;
 
+extern std::map<std::string, int> sz;
+
 class Server 
 {
 
@@ -33,6 +35,8 @@ public:
 private:
   void InitSessions();
   void SetSocketOptions();
+
+private:
   int sd; //socket descriptor
   std::vector<std::thread> threads;
 

@@ -76,7 +76,7 @@ void HandlerThread::Start()
         auto end = std::chrono::system_clock::now();
         std::chrono::duration<double> elapsed = end-start;
 
-        if (elapsed.count() > 0.2)
+        if (elapsed.count() > 0.08)
         {
             SendUpdate();
             start = std::chrono::system_clock::now();
@@ -284,11 +284,14 @@ void HandlerThread::HandleRetrieveRequest()
 
 void HandlerThread::HandleCreateFileRequest(const std::string& filename)
 {
+   std::lock_guard<std::mutex> lock(*sessions_mutex);
+  
   std::string filepath = folder + filename;
   std::fstream file;                                                                                  
   file.open(filepath, std::ios::out | std::ios::trunc); 
   file.close();
 
+  std::cout << "add row in creation "<<filename<<std::endl;
   CSVRow listRow;
   listRow.Add(filename);
   listRow.Add("0");
@@ -298,6 +301,7 @@ void HandlerThread::HandleCreateFileRequest(const std::string& filename)
   CSVWriter listUpdate(fileListPath);
   listUpdate.AddRow(listRow);
 
+  currentFilename = filename;
   InitSession();
 
   Write(client, "Succes");
@@ -373,8 +377,6 @@ bool HandlerThread::JoinSession(int sessIdx)
 
 void HandlerThread::InitSession()
 {
-  std::lock_guard<std::mutex> lock(*sessions_mutex);
-  
   Session* tmpSession = new Session();
   tmpSession->filename = currentFilename;
   (*fileToSession)[currentFilename] = (*sessions).size();

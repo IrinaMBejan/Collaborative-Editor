@@ -1,6 +1,7 @@
 #include "editqdockwidget.h"
 
 #include <QDebug>
+#include <QPainter>
 
 void EditQDockWidget::closeEvent(QCloseEvent *event)
 {
@@ -32,4 +33,17 @@ void QPlainTextEditView::keyPressEvent(QKeyEvent *e)
     }
 
     e->ignore();
+}
+
+void QPlainTextEditView::mousePressEvent(QMouseEvent *e)
+{
+    this->setFocus();
+    e->ignore();
+}
+
+void QPlainTextEditView::paintEvent(QPaintEvent *event)
+{
+    QPlainTextEdit::paintEvent(event);
+    QPainter p(viewport());
+    p.fillRect(cursorRect(), QBrush(Qt::blue));
 }

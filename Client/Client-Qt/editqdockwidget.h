@@ -22,6 +22,8 @@ class QPlainTextEditView: public QPlainTextEdit {
 public:
     using QPlainTextEdit::QPlainTextEdit;
     void keyPressEvent(QKeyEvent *e) override;
+    void mousePressEvent(QMouseEvent *e) override;
+    void paintEvent(QPaintEvent* event) override;
 
 signals:
     void contentsChange(int, int, QString);

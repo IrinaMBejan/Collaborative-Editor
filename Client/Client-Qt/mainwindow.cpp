@@ -139,12 +139,15 @@ void MainWindow::on_editFile_clicked()
 
     timer = new QTimer(this);
     connect(timer, SIGNAL(timeout()), this, SLOT(SeekUpdates()));
-    timer->start(100);
+    timer->start(50);
 
     dock = new EditQDockWidget(filename, this);
     dock->setFloating(true);
 
     editor = new QPlainTextEditView(dock);
+    editor->setUndoRedoEnabled(false);
+    editor->setReadOnly(true);
+
     QObject::connect(editor, SIGNAL(contentsChange(int,int,QString)),
                      this, SLOT(SendUpdateOnContentChange(int,int,QString)));
     QObject::connect(editor, SIGNAL(cursorChange(int)),
@@ -175,9 +178,10 @@ void MainWindow::SendClosingOperation()
     qDebug() << "Closing operation...";
     if (!handler->SendOperationClose())
     {
-        ShowError("Something went wrong in the server !");
         return;
     }
+
+    RefreshDataTable();
 }
 
 void MainWindow::SendUpdateCursorChange(int diff)
