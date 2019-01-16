@@ -16,7 +16,7 @@ MainWindow::MainWindow(QWidget *parent) :
     handler = new RequestsHandler(this);
 
     QObject::connect(handler, SIGNAL(notifyServerDown()),
-                     this, SLOT(on_server_down()));
+                     this, SLOT(ServerDown()));
 
     ui->setupUi(this);
     ui->Filelist->setVisible(0);
@@ -63,6 +63,8 @@ void MainWindow::on_pushButton_clicked()
 void MainWindow::on_createFile_clicked()
 {
     std::string filename = ui->newFileName->text().toStdString();
+
+    ui->newFileName->setText("");
 
     if (!filename.size())
     {
@@ -163,7 +165,7 @@ void MainWindow::on_editFile_clicked()
     dock->show();
 }
 
-void MainWindow::on_server_down()
+void MainWindow::ServerDown()
 {
     dock->close();
     ui->Loginform->setVisible(1);
@@ -192,6 +194,13 @@ void MainWindow::SendUpdateCursorChange(int diff)
     handler->SendCursorOperation(diff);
 }
 
+// https://stackoverflow.com/questions/4214369/how-to-convert-qstring-to-stdstring
+static inline std::string toUtf8(const QString& s)
+{
+    QByteArray sUtf8 = s.toUtf8();
+    return std::string(sUtf8.constData(), sUtf8.size());
+}
+
 void MainWindow::SendUpdateOnContentChange(
         int position, int charsRemoved, QString charsAdded)
 {
@@ -210,9 +219,8 @@ void MainWindow::SendUpdateOnContentChange(
     {
         handler->SendInsertOperation(
                     position,
-                    charsAdded.toStdString());
+                    toUtf8(charsAdded));
     }
-
 }
 
 void MainWindow::SeekUpdates()

@@ -17,6 +17,9 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
+public slots:
+    void ServerDown();
+
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
@@ -29,8 +32,6 @@ private slots:
     void on_downloadFile_clicked();
 
     void on_editFile_clicked();
-
-    void on_server_down();
 
 private:
 
