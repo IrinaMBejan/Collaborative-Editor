@@ -20,6 +20,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->setupUi(this);
     ui->Filelist->setVisible(0);
+    ui->dataTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+
     for (int idx = 0; idx < ui->dataTable->horizontalHeader()->count(); ++idx)
     {
         ui->dataTable->horizontalHeader()->setSectionResizeMode(
@@ -27,8 +29,7 @@ MainWindow::MainWindow(QWidget *parent) :
     }
 
     externUpdate = false;
-
-    emit on_pushButton_clicked();
+    started=false;
 }
 
 MainWindow::~MainWindow()
@@ -47,9 +48,6 @@ void MainWindow::on_pushButton_clicked()
 
     std::string user = ui->userField->text().toStdString();
     std::string pass = ui->passField->text().toStdString();
-
-    user = "ana";
-    pass = "pass123";
 
     if (!handler->SendLoginRequest(user, pass))
     {
@@ -246,11 +244,19 @@ void MainWindow::ApplyUpdate(const QString &plaintext, int cursorPos)
 
     editor->setPlainText(plaintext);
 
+    if (cursorPos > plaintext.size())
+        cursorPos = plaintext.size();
+
     QTextCursor oldCursor = editor->textCursor();
     oldCursor.setPosition(cursorPos);
     editor->setTextCursor(oldCursor);
 
     externUpdate = false;
+}
+
+void MainWindow::OnRefreshDataTable()
+{
+    RefreshDataTable();
 }
 
 void MainWindow::SaveFileAs(const QString& data, const QString& filename)

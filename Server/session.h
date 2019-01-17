@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <vector>
 
-#define SESSION_CLIENTS_MAX 2
+#define SESSION_CLIENTS_MAX 10
 
 struct Session
 {

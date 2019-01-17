@@ -4,6 +4,7 @@
 #include <map>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 
 #include "handlerthread.h"
 #include "server.h"
@@ -113,7 +114,6 @@ static void RefreshList()
 {
   std::lock_guard<std::mutex> guard(sessions_mutex);
 
-  std::cout<<"refreshing list"<<std::endl;
   std::map<std::string, int>::iterator it;
 
   std::string filepath = "files/list.csv";
@@ -125,26 +125,20 @@ static void RefreshList()
     row.Add(it->first);
     row.Add(std::to_string(it->second));
 
-    std::cout<<"row is "<<it->first <<" "<<it->second<<std::endl;
     it == sz.begin() ? listUpdate.AddRow(row, true) : listUpdate.AddRow(row);
   }
 }
 
 static void BackgroundSaveToDisk()
 {
-  auto start = std::chrono::system_clock::now();
 
-  while(1)
+  while (1)
   {
-    auto end = std::chrono::system_clock::now();
-    std::chrono::duration<double> elapsed = end-start;
 
-    if (elapsed.count() > 10)
-    {
-      SaveSessions();
-      RefreshList();
-      start = std::chrono::system_clock::now(); 
-    }
+    SaveSessions();
+    RefreshList();
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
 }
 
@@ -219,7 +213,6 @@ void Server::StartListening()
     CHECK_ERROR(
         (client = accept(sd, (struct sockaddr*) &cl, (socklen_t*)&size)), 
         "Accept error"); 
-    // TODO: this shouldn't crush the server: continue and not return;
     
     if (TryLogin(client))
     {
@@ -227,6 +220,7 @@ void Server::StartListening()
 
       threads.push_back(std::thread(HandleClient, client));
     } 
+
   }
 
   std::for_each(threads.begin(),threads.end(),JoinThread);

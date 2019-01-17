@@ -42,6 +42,7 @@ private:
     void ApplyUpdate(const QString &plaintext, int cursorPos);
 
 private slots:
+    void OnRefreshDataTable();
     void SendClosingOperation();
     void SendUpdateOnContentChange(int position,
                                    int charsRemoved,
@@ -55,7 +56,9 @@ private:
     QPlainTextEdit* editor;
     EditQDockWidget* dock;
     QTimer* timer;
+    QTimer* timerTable;
     bool externUpdate;
+    bool started;
 };
 
 #endif // MAINWINDOW_H

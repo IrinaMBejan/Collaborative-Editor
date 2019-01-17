@@ -6,6 +6,9 @@
 #include <chrono>
 #include <ctime>
 #include <algorithm>
+#include <thread>
+
+#include <sys/select.h>
 
 #include "handlerthread.h"
 #include "utils.h"
@@ -17,7 +20,7 @@
 static constexpr const char* retrieve_list = "retrieve files";
 static constexpr const char* operations_init = "operations start";
 static constexpr const char* operations_close = "operations close";
-static constexpr const char* operation_insert = "insert (\\d+) ([\\s\\S]+)";
+static constexpr const char* operation_insert = "insert (\\d+) (.|\r)";
 static constexpr const char* operation_delete = "delete (\\d+) (\\d+)";
 static constexpr const char* operation_cursor = "cursor (-?\\d+)";
 static constexpr const char* create_file = 
@@ -83,6 +86,7 @@ void HandlerThread::Start()
         }
     }
   }
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
 }
 
 void HandlerThread::HandleMessage(const std::string& buffer)
@@ -226,7 +230,7 @@ void HandlerThread::HandleInsertOperation(int position, std::string text)
   std::lock_guard<std::mutex> guard((*sessions)[sessionIdx]->content_mutex);
   
   Session* session = (*sessions)[sessionIdx];
-  session->content.insert(position,text);
+  session->content.insert(session->cursorPosition[client],text);
 
   for (auto& cursor : session->cursorPosition)
   {
@@ -243,7 +247,11 @@ void HandlerThread::HandleDeleteOperation(int position, int length)
   std::lock_guard<std::mutex> guard((*sessions)[sessionIdx]->content_mutex);
   
   Session* session = (*sessions)[sessionIdx];
-  session->content.erase(position,length);
+
+  if (session->cursorPosition[client] == 0)
+      return;
+
+  session->content.erase(session->cursorPosition[client]-1,length);
 
   for (auto& cursor : session->cursorPosition)
   {
@@ -251,7 +259,6 @@ void HandlerThread::HandleDeleteOperation(int position, int length)
     {
         cursor.second--;
         cursor.second = std::max(cursor.second, 0);
-    // TODO: update for longer text
     }
   }
 
@@ -291,7 +298,6 @@ void HandlerThread::HandleCreateFileRequest(const std::string& filename)
   file.open(filepath, std::ios::out | std::ios::trunc); 
   file.close();
 
-  std::cout << "add row in creation "<<filename<<std::endl;
   CSVRow listRow;
   listRow.Add(filename);
   listRow.Add("0");
